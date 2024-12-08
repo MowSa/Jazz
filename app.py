@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-st.set_page_config(page_title="Jazz Flight Gate Checker", page_icon="✈️")
+st.set_page_config(page_title="Jazz Flight Gate Checker ✈️", page_icon="✈️")
 
 st.title("Jazz Flight Gate Checker")
 
