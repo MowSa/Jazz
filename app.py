@@ -60,10 +60,10 @@ if st.button("Check Gates"):
             # YTZ Gate Optimization Section
             st.header("YTZ Gate Optimization")
             
-            # Get relevant columns: Gate (8th) and Airport (10th)
+            # Get relevant columns: Flight (1st), Gate (8th) and Airport (10th)
             ac_fids_ytz = ac_fids.parse(ac_fids.sheet_names[0])
-            ac_fids_ytz = ac_fids_ytz.iloc[:, [7, 9]].copy()
-            ac_fids_ytz.columns = ["Gate", "Airport"]
+            ac_fids_ytz = ac_fids_ytz.iloc[:, [0, 7, 9]].copy()  # Added flight number column
+            ac_fids_ytz.columns = ["Flight", "Gate", "Airport"]
             
             # Convert gate numbers to numeric, replacing non-numeric values with NaN
             ac_fids_ytz['Gate'] = pd.to_numeric(ac_fids_ytz['Gate'], errors='coerce')
@@ -77,10 +77,8 @@ if st.button("Check Gates"):
             ].copy()
             
             if len(ytz_gates) > 0:
-                st.warning(f"Found {len(ytz_gates)} YTZ flights on gates 17-34:")
-                
-                # Create a styled dataframe for display
                 display_df = pd.DataFrame({
+                    'Flight': ytz_gates['Flight'],
                     'Gate': ytz_gates['Gate'].astype(int),
                     'Warning': ['⚠️ YTZ flight suggested to use other gate'] * len(ytz_gates)
                 })
@@ -89,6 +87,7 @@ if st.button("Check Gates"):
                     display_df,
                     hide_index=True,
                     column_config={
+                        "Flight": "Flight Number",
                         "Gate": "Gate Number",
                         "Warning": "Status"
                     }
@@ -96,15 +95,15 @@ if st.button("Check Gates"):
                 
                 st.error(f"⚠️ {len(ytz_gates)} YTZ flights suggested to be moved to other gates")
             else:
-                st.success("No YTZ flights found on gates 17-34 (Good!)")
+                st.success("No YTZ flights found on gates 17-34")
                 
             # CRJ Gate Optimization Section
             st.header("CRJ Gate Optimization")
             
-            # Get relevant columns: Gate (8th) and Aircraft Type (6th)
+            # Get relevant columns: Flight (1st), Aircraft Type (6th), and Gate (8th)
             ac_fids_crj = ac_fids.parse(ac_fids.sheet_names[0])
-            ac_fids_crj = ac_fids_crj.iloc[:, [5, 7]].copy()  # 6th and 8th columns
-            ac_fids_crj.columns = ["Aircraft", "Gate"]
+            ac_fids_crj = ac_fids_crj.iloc[:, [0, 5, 7]].copy()  # Added flight number column
+            ac_fids_crj.columns = ["Flight", "Aircraft", "Gate"]
             
             # Convert gate numbers to numeric
             ac_fids_crj['Gate'] = pd.to_numeric(ac_fids_crj['Gate'], errors='coerce')
@@ -116,9 +115,8 @@ if st.button("Check Gates"):
             ].copy()
             
             if len(crj_gate_25) > 0:
-                st.warning(f"Found {len(crj_gate_25)} CRJ flights on gate 25:")
-                
                 display_df = pd.DataFrame({
+                    'Flight': crj_gate_25['Flight'],
                     'Aircraft': crj_gate_25['Aircraft'],
                     'Gate': crj_gate_25['Gate'].astype(int),
                     'Warning': ['⚠️ CRJ flight suggested to use other gate'] * len(crj_gate_25)
@@ -128,6 +126,7 @@ if st.button("Check Gates"):
                     display_df,
                     hide_index=True,
                     column_config={
+                        "Flight": "Flight Number",
                         "Aircraft": "Aircraft Type",
                         "Gate": "Gate Number",
                         "Warning": "Status"
@@ -136,10 +135,10 @@ if st.button("Check Gates"):
                 
                 st.error(f"⚠️ {len(crj_gate_25)} CRJ flights suggested to be moved from gate 25")
             else:
-                st.success("No CRJ flights found on gate 25 (Good!)")
+                st.success("No CRJ flights found on gate 25")
             
             # High Gates Optimization Section
-            st.header("High Gates Optimization")
+            st.header("U.S Gates Optimization")
             
             # Filter for gates 87-89
             high_gates = ac_fids_crj[
@@ -149,9 +148,8 @@ if st.button("Check Gates"):
             ].copy()
             
             if len(high_gates) > 0:
-                st.warning(f"Found {len(high_gates)} flights on gates 87-89:")
-                
                 display_df = pd.DataFrame({
+                    'Flight': high_gates['Flight'],
                     'Aircraft': high_gates['Aircraft'],
                     'Gate': high_gates['Gate'].astype(int),
                     'Warning': ['⚠️ Flight suggested to use other gate'] * len(high_gates)
@@ -161,6 +159,7 @@ if st.button("Check Gates"):
                     display_df,
                     hide_index=True,
                     column_config={
+                        "Flight": "Flight Number",
                         "Aircraft": "Aircraft Type",
                         "Gate": "Gate Number",
                         "Warning": "Status"
@@ -169,7 +168,7 @@ if st.button("Check Gates"):
                 
                 st.error(f"⚠️ {len(high_gates)} flights suggested to be moved from gates 87-89")
             else:
-                st.success("No flights found on gates 87-89 (Good!)")
+                st.success("No flights found on gates 87-89")
                 
         except Exception as e:
             st.error(f"An error occurred: {str(e)}") 
