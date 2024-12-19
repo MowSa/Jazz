@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-st.set_page_config(page_title="Jazz Flight Gate Checker1", page_icon="✈️")
+st.set_page_config(page_title="Jazz Flight Gate Checker", page_icon="✈️")
 
 st.title("Jazz Flight Gate Checker")
 
@@ -26,43 +26,30 @@ if st.button("Check Gates"):
             daily_planning_df = daily_planning.parse(daily_planning.sheet_names[0])
             daily_planning_cleaned = daily_planning_df.iloc[:, [0, 5, 9]].copy()
             daily_planning_cleaned.columns = ["Arr_Flight", "Dep_Flight", "Gate"]
-
-            # Prepare arrival flights
-            arr_df = daily_planning_cleaned[['Arr_Flight', 'Gate']].copy()
-            arr_df['Flight'] = arr_df['Arr_Flight'].str.replace("ACA", "QK", regex=False)
-
-            # Prepare departure flights
-            dep_df = daily_planning_cleaned[['Dep_Flight', 'Gate']].copy()
-            dep_df['Flight'] = dep_df['Dep_Flight'].str.replace("ACA", "QK", regex=False)
-
-            # Filter out empty flights
-            arr_df = arr_df[arr_df['Flight'].notna() & (arr_df['Flight'] != '')]
-            dep_df = dep_df[dep_df['Flight'].notna() & (dep_df['Flight'] != '')]
-
-            # Combine both
-            combined_daily_df = pd.concat([arr_df[['Flight', 'Gate']], dep_df[['Flight', 'Gate']]], ignore_index=True)
-            combined_daily_df['Date'] = pd.to_datetime(date).date()
-
-            # Clean Gate formatting
-            combined_daily_df["Gate"] = combined_daily_df["Gate"].astype(str).str.extract('(\d+)').fillna(combined_daily_df["Gate"])
-
-            # Process AC FIDS
+            
+            daily_planning_cleaned["Arr_Time"] = date.strftime("%Y-%m-%d")
+            daily_planning_cleaned["Flight"] = daily_planning_cleaned["Arr_Flight"].str.replace("ACA", "QK", regex=False)
+            daily_planning_cleaned["Date"] = pd.to_datetime(daily_planning_cleaned["Arr_Time"]).dt.date
+            daily_planning_cleaned["Gate"] = daily_planning_cleaned["Gate"].astype(str).str.strip()
+            
             ac_fids_df = ac_fids.parse(ac_fids.sheet_names[0])
             ac_fids_cleaned = ac_fids_df.iloc[:, [0, 2, 7]].copy()
             ac_fids_cleaned.columns = ["Flight", "Date", "Gate"]
             ac_fids_cleaned["Date"] = pd.to_datetime(ac_fids_cleaned["Date"], errors='coerce').dt.date
-            ac_fids_cleaned["Gate"] = ac_fids_cleaned["Gate"].astype(str).str.extract('(\d+)').fillna(ac_fids_cleaned["Gate"])
-
-            # Compare Gates
+            ac_fids_cleaned["Gate"] = ac_fids_cleaned["Gate"].astype(str).str.strip()
+            
+            # Gate Mismatches Section
+            st.header("Gate Mismatches")
+            
             comparison_df = pd.merge(
-                combined_daily_df, 
+                daily_planning_cleaned, 
                 ac_fids_cleaned, 
                 on=["Flight", "Date"], 
                 how="inner", 
                 suffixes=("_DailyPlanning", "_ACFIDS")
             )
-
-            gate_mismatches = comparison_df[comparison_df["Gate_DailyPlanning"] != comparison_df["Gate_ACFIDS"]]    
+            
+            gate_mismatches = comparison_df[comparison_df["Gate_DailyPlanning"] != comparison_df["Gate_ACFIDS"]]
             
             if len(gate_mismatches) > 0:
                 st.subheader("Gate Assignment Mismatches:")
