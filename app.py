@@ -40,16 +40,18 @@ if st.button("Check Gates"):
             all_flights = pd.concat([arrivals, departures], ignore_index=True)
             all_flights = all_flights.dropna(subset=["Flight"])  # Remove rows with no flight numbers
             
-            # Add date column
+            # Add date column and clean gates (remove A/B suffix)
             all_flights["Date"] = date
             all_flights["Date"] = pd.to_datetime(all_flights["Date"]).dt.date
             all_flights["Gate"] = all_flights["Gate"].astype(str).str.strip()
+            all_flights["Gate"] = all_flights["Gate"].str.extract('(\d+)').fillna(all_flights["Gate"])
             
             ac_fids_df = ac_fids.parse(ac_fids.sheet_names[0])
             ac_fids_cleaned = ac_fids_df.iloc[:, [0, 2, 7]].copy()
             ac_fids_cleaned.columns = ["Flight", "Date", "Gate"]
             ac_fids_cleaned["Date"] = pd.to_datetime(ac_fids_cleaned["Date"], errors='coerce').dt.date
             ac_fids_cleaned["Gate"] = ac_fids_cleaned["Gate"].astype(str).str.strip()
+            ac_fids_cleaned["Gate"] = ac_fids_cleaned["Gate"].str.extract('(\d+)').fillna(ac_fids_cleaned["Gate"])
             
             # Gate Mismatches Section
             st.header("Gate Mismatches")
