@@ -30,13 +30,13 @@ if st.button("Check Gates"):
             daily_planning_cleaned["Arr_Time"] = date.strftime("%Y-%m-%d")
             daily_planning_cleaned["Flight"] = daily_planning_cleaned["Arr_Flight"].str.replace("ACA", "QK", regex=False)
             daily_planning_cleaned["Date"] = pd.to_datetime(daily_planning_cleaned["Arr_Time"]).dt.date
-            daily_planning_cleaned["Gate"] = daily_planning_cleaned["Gate"].astype(str).str.strip()
+            daily_planning_cleaned["Gate"] = daily_planning_cleaned["Gate"].astype(str).str.extract('(\d+)').fillna(daily_planning_cleaned["Gate"])
             
             ac_fids_df = ac_fids.parse(ac_fids.sheet_names[0])
             ac_fids_cleaned = ac_fids_df.iloc[:, [0, 2, 7]].copy()
             ac_fids_cleaned.columns = ["Flight", "Date", "Gate"]
             ac_fids_cleaned["Date"] = pd.to_datetime(ac_fids_cleaned["Date"], errors='coerce').dt.date
-            ac_fids_cleaned["Gate"] = ac_fids_cleaned["Gate"].astype(str).str.strip()
+            ac_fids_cleaned["Gate"] = ac_fids_cleaned["Gate"].astype(str).str.extract('(\d+)').fillna(ac_fids_cleaned["Gate"])
             
             # Gate Mismatches Section
             st.header("Gate Mismatches")
