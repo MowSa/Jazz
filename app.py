@@ -27,10 +27,23 @@ if st.button("Check Gates"):
             daily_planning_cleaned = daily_planning_df.iloc[:, [0, 5, 9]].copy()
             daily_planning_cleaned.columns = ["Arr_Flight", "Dep_Flight", "Gate"]
             
-            daily_planning_cleaned["Arr_Time"] = date.strftime("%Y-%m-%d")
-            daily_planning_cleaned["Flight"] = daily_planning_cleaned["Arr_Flight"].str.replace("ACA", "QK", regex=False)
-            daily_planning_cleaned["Date"] = pd.to_datetime(daily_planning_cleaned["Arr_Time"]).dt.date
-            daily_planning_cleaned["Gate"] = daily_planning_cleaned["Gate"].astype(str).str.strip()
+            # Create separate dataframes for arrivals and departures
+            arrivals = daily_planning_cleaned[["Arr_Flight", "Gate"]].copy()
+            arrivals.columns = ["Flight", "Gate"]
+            arrivals["Flight"] = arrivals["Flight"].str.replace("ACA", "QK", regex=False)
+            
+            departures = daily_planning_cleaned[["Dep_Flight", "Gate"]].copy()
+            departures.columns = ["Flight", "Gate"]
+            departures["Flight"] = departures["Flight"].str.replace("ACA", "QK", regex=False)
+            
+            # Combine arrivals and departures
+            all_flights = pd.concat([arrivals, departures], ignore_index=True)
+            all_flights = all_flights.dropna(subset=["Flight"])  # Remove rows with no flight numbers
+            
+            # Add date column
+            all_flights["Date"] = date
+            all_flights["Date"] = pd.to_datetime(all_flights["Date"]).dt.date
+            all_flights["Gate"] = all_flights["Gate"].astype(str).str.strip()
             
             ac_fids_df = ac_fids.parse(ac_fids.sheet_names[0])
             ac_fids_cleaned = ac_fids_df.iloc[:, [0, 2, 7]].copy()
@@ -42,12 +55,15 @@ if st.button("Check Gates"):
             st.header("Gate Mismatches")
             
             comparison_df = pd.merge(
-                daily_planning_cleaned, 
+                all_flights, 
                 ac_fids_cleaned, 
                 on=["Flight", "Date"], 
                 how="inner", 
                 suffixes=("_DailyPlanning", "_ACFIDS")
             )
+            
+            # Remove duplicates if any
+            comparison_df = comparison_df.drop_duplicates()
             
             gate_mismatches = comparison_df[comparison_df["Gate_DailyPlanning"] != comparison_df["Gate_ACFIDS"]]
             
