@@ -28,15 +28,29 @@ if st.button("Check Gates"):
             daily_planning_cleaned.columns = ["Arr_Flight", "Dep_Flight", "Gate"]
             
             daily_planning_cleaned["Arr_Time"] = date.strftime("%Y-%m-%d")
-            daily_planning_cleaned["Flight"] = daily_planning_cleaned["Arr_Flight"].str.replace("ACA", "QK", regex=False)
+            daily_planning_cleaned["Flight"] = daily_planning_cleaned["Dep_Flight"].str.replace("ACA", "QK", regex=False)
             daily_planning_cleaned["Date"] = pd.to_datetime(daily_planning_cleaned["Arr_Time"]).dt.date
+            
+            # Debug print before gate cleaning
+            st.write("Debug - Daily Planning Gates before cleaning:", daily_planning_cleaned[["Flight", "Gate"]].head(10))
+            
             daily_planning_cleaned["Gate"] = daily_planning_cleaned["Gate"].astype(str).str.extract('(\d+)').fillna(daily_planning_cleaned["Gate"])
+            
+            # Debug print after gate cleaning
+            st.write("Debug - Daily Planning Gates after cleaning:", daily_planning_cleaned[["Flight", "Gate"]].head(10))
             
             ac_fids_df = ac_fids.parse(ac_fids.sheet_names[0])
             ac_fids_cleaned = ac_fids_df.iloc[:, [0, 2, 7]].copy()
             ac_fids_cleaned.columns = ["Flight", "Date", "Gate"]
             ac_fids_cleaned["Date"] = pd.to_datetime(ac_fids_cleaned["Date"], errors='coerce').dt.date
+            
+            # Debug print before gate cleaning
+            st.write("Debug - AC FIDS Gates before cleaning:", ac_fids_cleaned[["Flight", "Gate"]].head(10))
+            
             ac_fids_cleaned["Gate"] = ac_fids_cleaned["Gate"].astype(str).str.extract('(\d+)').fillna(ac_fids_cleaned["Gate"])
+            
+            # Debug print after gate cleaning
+            st.write("Debug - AC FIDS Gates after cleaning:", ac_fids_cleaned[["Flight", "Gate"]].head(10))
             
             # Gate Mismatches Section
             st.header("Gate Mismatches")
@@ -48,6 +62,9 @@ if st.button("Check Gates"):
                 how="inner", 
                 suffixes=("_DailyPlanning", "_ACFIDS")
             )
+            
+            # Debug print merged data
+            st.write("Debug - Merged Data:", comparison_df[["Flight", "Gate_DailyPlanning", "Gate_ACFIDS"]].head(10))
             
             gate_mismatches = comparison_df[comparison_df["Gate_DailyPlanning"] != comparison_df["Gate_ACFIDS"]]
             
