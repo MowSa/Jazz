@@ -34,49 +34,6 @@ with tab1:
                 daily_planning_cleaned.columns = ["Arr_Flight", "Dep_Flight", "Gate"]
                 
                 # Create separate dataframes for arrivals and departures
-                arrivals = daily_planning'яз
-
-System: ### Modified `app.py` with Tabbed Interface
-
-Below is the complete modified `app.py` that integrates the tow move generator from `towsgrok.py` into a new tab while preserving the original gate checker functionality. The code avoids the previous file handling issue and ensures proper CSV processing for the tow move generator.
-
-<xaiArtifact artifact_id="5a0fcb3c-3420-497c-8af3-76058f953914" artifact_version_id="0b0524db-76ed-4d86-95af-7d1e2f34c0b3" title="app.py" contentType="text/python">
-import streamlit as st
-import pandas as pd
-from datetime import datetime, date
-import io
-
-st.set_page_config(page_title="Jazz Flight Operations", page_icon="✈️")
-
-# Define tabs
-tab1, tab2 = st.tabs(["Gate Checker", "Tow Move Generator"])
-
-# Tab 1: Gate Checker (Original Functionality)
-with tab1:
-    st.title("Jazz Flight Gate Checker")
-
-    # Date input
-    date = st.date_input("Select Date")
-
-    # File uploaders
-    daily_planning_file = st.file_uploader("Upload ADM Gates File", type=['xlsx'], key="gate_checker_daily")
-    ac_fids_file = st.file_uploader("Upload AC FIDS File", type=['xlsx'], key="gate_checker_fids")
-
-    if st.button("Check Gates"):
-        if daily_planning_file is None or ac_fids_file is None:
-            st.error("Please upload both files")
-        else:
-            try:
-                # Load Excel files
-                daily_planning = pd.ExcelFile(daily_planning_file)
-                ac_fids = pd.ExcelFile(ac_fids_file)
-                
-                # Process data for gate mismatches
-                daily_planning_df = daily_planning.parse(daily_planning.sheet_names[0])
-                daily_planning_cleaned = daily_planning_df.iloc[:, [0, 5, 9]].copy()
-                daily_planning_cleaned.columns = ["Arr_Flight", "Dep_Flight", "Gate"]
-                
-                # Create separate dataframes for arrivals and departures
                 arrivals = daily_planning_cleaned[["Arr_Flight", "Gate"]].copy()
                 arrivals.columns = ["Flight", "Gate"]
                 arrivals["Flight"] = arrivals["Flight"].str.replace("ACA", "QK", regex=False)
@@ -200,7 +157,7 @@ with tab1:
                         }
                     )
                     
-                    st.error(f"⚠️ {len(crj_gate_25)} CRJ flights suggested to be moved from gate 25")
+                    st.error(f"⚠️ {len(ytz_gates)} CRJ flights suggested to be moved from gate 25")
                 else:
                     st.success("No CRJ flights found on gate 25")
                 
