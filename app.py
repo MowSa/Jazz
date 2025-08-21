@@ -266,13 +266,6 @@ with tab2:
             # Use StringIO to create a file-like object for Pandas
             df = pd.read_csv(io.StringIO(file_content), header=1)
             
-            # Debug: Display column names and sample row
-            st.write("**CSV Columns Detected:**")
-            st.write(list(df.columns))
-            if not df.empty:
-                st.write("**Sample Row:**")
-                st.write(df.iloc[0].to_dict())
-            
             # Handle possible column names with newlines or duplicates
             try:
                 gate_in_col = next(col for col in df.columns if 'Terminal / Gate' in col or 'Terminal\n/ Gate' in col)
@@ -290,7 +283,7 @@ with tab2:
             tows = []
             for idx, row in df.iterrows():
                 tail = row.get(tail_col, '')
-                if not tail:  # Relaxed tail number check
+                if not tail:  # Skip if tail is empty
                     continue
                 
                 gate_in = row.get(gate_in_col, '')
@@ -312,10 +305,6 @@ with tab2:
                 
                 turn_min = turn_time_to_minutes(turn)
                 over_2h = turn_min > 120
-                
-                # Debug: Show why a row might be included
-                if different_date or different_gate or over_2h:
-                    st.write(f"**Row {idx}**: Tail={tail}, Different Date={different_date}, Different Gate={different_gate}, Turn Time={turn} ({turn_min} min), Over 2h={over_2h}")
                 
                 if different_date or different_gate or over_2h:
                     # Tow logic:
@@ -358,7 +347,7 @@ with tab2:
                     mime="text/csv"
                 )
             else:
-                st.warning("No tow moves found. Check debug output above for details.")
+                st.warning("No tow moves found.")
                 
         except Exception as e:
             st.error(f"An error occurred in Tow Move Generator: {str(e)}")
