@@ -8,7 +8,7 @@ st.set_page_config(page_title="Jazz Flight Operations", page_icon="✈️")
 # Define tabs
 tab1, tab2 = st.tabs(["Gate Checker", "Tow Move Generator"])
 
-# Tab 1: Gate Checker (Original Functionality)
+# Tab 1: Gate Checker
 with tab1:
     st.title("Jazz Flight Gate Checker")
 
@@ -50,14 +50,14 @@ with tab1:
                 all_flights["Date"] = date
                 all_flights["Date"] = pd.to_datetime(all_flights["Date"]).dt.date
                 all_flights["Gate"] = all_flights["Gate"].astype(str).str.strip()
-                all_flights["Gate"] = all_flights["Gate"].str.extract('(\d+)').fillna(all_flights["Gate"])
+                all_flights["Gate"] = all_flights["Gate"].str.extract(r'(\d+)').fillna(all_flights["Gate"])
                 
                 ac_fids_df = ac_fids.parse(ac_fids.sheet_names[0])
                 ac_fids_cleaned = ac_fids_df.iloc[:, [0, 2, 7]].copy()
                 ac_fids_cleaned.columns = ["Flight", "Date", "Gate"]
                 ac_fids_cleaned["Date"] = pd.to_datetime(ac_fids_cleaned["Date"], errors='coerce').dt.date
                 ac_fids_cleaned["Gate"] = ac_fids_cleaned["Gate"].astype(str).str.strip()
-                ac_fids_cleaned["Gate"] = ac_fids_cleaned["Gate"].str.extract('(\d+)').fillna(ac_fids_cleaned["Gate"])
+                ac_fids_cleaned["Gate"] = ac_fids_cleaned["Gate"].str.extract(r'(\d+)').fillna(ac_fids_cleaned["Gate"])
                 
                 # Gate Mismatches Section
                 st.header("Gate Mismatches")
@@ -157,7 +157,7 @@ with tab1:
                         }
                     )
                     
-                    st.error(f"⚠️ {len(ytz_gates)} CRJ flights suggested to be moved from gate 25")
+                    st.error(f"⚠️ {len(crj_gate_25)} CRJ flights suggested to be moved from gate 25")
                 else:
                     st.success("No CRJ flights found on gate 25")
                 
@@ -249,97 +249,116 @@ with tab2:
     uploaded_file = st.file_uploader("Upload your CSV file", type="csv", key="tow_move_csv")
 
     if uploaded_file is not None:
-        # Read the file content and reset for Pandas
-        file_content = uploaded_file.read().decode('utf-8')
-        # Parse report date from file content
-        lines = file_content.splitlines()
-        for line in lines:
-            if line.startswith('Report generated at:'):
-                try:
-                    report_date_str = line.split(': ')[1].split()[0]
-                    report_date = datetime.strptime(report_date_str, '%d%b%y').date()
-                except:
-                    pass
-                break
-        
-        # Use StringIO to create a file-like object for Pandas
-        df = pd.read_csv(io.StringIO(file_content), header=1)
-        
-        # Handle possible column names with newlines or duplicates
-        gate_in_col = 'Terminal\n/ Gate' if 'Terminal\n/ Gate' in df.columns else [col for col in df.columns if 'Terminal / Gate' in col or 'Terminal\n/ Gate' in col][0]
-        gate_out_col = 'Terminal\n/ Gate.1' if 'Terminal\n/ Gate.1' in df.columns else [col for col in df.columns if 'Terminal / Gate' in col or 'Terminal\n/ Gate' in col][1]
-        turn_col = 'Turn Time\n(HH:MM)' if 'Turn Time\n(HH:MM)' in df.columns else [col for col in df.columns if 'Turn Time' in col][0]
-        toa_in_col = 'TOA'  # First TOA is inbound
-        tod_out_col = 'TOD.1' if 'TOD.1' in df.columns else 'TOD'  # Second TOD is outbound
-        tail_col = 'Tail'
-        flight_in_col = 'Flight'
-        flight_out_col = 'Flight.1' if 'Flight.1' in df.columns else 'Flight'
-        
-        tows = []
-        for idx, row in df.iterrows():
-            tail = row.get(tail_col, '')
-            if not str(tail).isdigit():
-                continue
+        try:
+            # Read the file content and reset for Pandas
+            file_content = uploaded_file.read().decode('utf-8')
+            # Parse report date from file content
+            lines = file_content.splitlines()
+            for line in lines:
+                if line.startswith('Report generated at:'):
+                    try:
+                        report_date_str = line.split(': ')[1].split()[0]
+                        report_date = datetime.strptime(report_date_str, '%d%b%y').date()
+                    except:
+                        pass
+                    break
             
-            gate_in = row.get(gate_in_col, '')
-            gate_out = row.get(gate_out_col, '')
-            toa_in = row.get(toa_in_col, '')
-            tod_out = row.get(tod_out_col, '')
-            turn = row.get(turn_col, '')
-            flight_in = row.get(flight_in_col, '')
-            flight_out = row.get(flight_out_col, '')
+            # Use StringIO to create a file-like object for Pandas
+            df = pd.read_csv(io.StringIO(file_content), header=1)
             
-            norm_in = normalize_gate(gate_in)
-            norm_out = normalize_gate(gate_out)
+            # Debug: Display column names and sample row
+            st.write("**CSV Columns Detected:**")
+            st.write(list(df.columns))
+            if not df.empty:
+                st.write("**Sample Row:**")
+                st.write(df.iloc[0].to_dict())
             
-            day_in = parse_day(toa_in, report_date)
-            day_out = parse_day(tod_out, report_date)
+            # Handle possible column names with newlines or duplicates
+            try:
+                gate_in_col = next(col for col in df.columns if 'Terminal / Gate' in col or 'Terminal\n/ Gate' in col)
+                gate_out_col = next(col for col in df.columns if 'Terminal / Gate.1' in col or 'Terminal\n/ Gate.1' in col)
+                turn_col = next(col for col in df.columns if 'Turn Time' in col)
+                toa_in_col = 'TOA'  # First TOA is inbound
+                tod_out_col = 'TOD.1' if 'TOD.1' in df.columns else 'TOD'  # Second TOD is outbound
+                tail_col = 'Tail'
+                flight_in_col = 'Flight'
+                flight_out_col = 'Flight.1' if 'Flight.1' in df.columns else 'Flight'
+            except StopIteration as e:
+                st.error(f"Error: Could not find required columns in CSV. Expected columns include 'Terminal / Gate', 'Terminal / Gate.1', 'Turn Time', 'TOA', 'TOD', 'Tail', 'Flight'. Got: {list(df.columns)}")
+                st.stop()
             
-            different_date = day_in is not None and day_out is not None and day_in != day_out
-            different_gate = norm_in != norm_out and norm_in and norm_out
-            
-            turn_min = turn_time_to_minutes(turn)
-            over_2h = turn_min > 120
-            
-            if different_date or different_gate or over_2h:
-                # Tow logic:
-                # - Arrived yesterday (day_in < 0), departing today or later: tow from BSE to departure gate
-                # - Arriving today (day_in = 0), departing tomorrow (day_out > 0): tow from arrival gate to BSE
-                # - Different gates on same day: tow from arrival gate to departure gate
-                # - Over 2h turn time on same gate: tow from arrival gate to departure gate
-                tow_from = 'BSE' if day_in is not None and day_in < 0 else norm_in
-                tow_to = 'BSE' if day_out is not None and day_out > 0 else norm_out
-                
-                # Skip if both tow_from and tow_to are BSE
-                if tow_from == 'BSE' and tow_to == 'BSE':
+            tows = []
+            for idx, row in df.iterrows():
+                tail = row.get(tail_col, '')
+                if not tail:  # Relaxed tail number check
                     continue
+                
+                gate_in = row.get(gate_in_col, '')
+                gate_out = row.get(gate_out_col, '')
+                toa_in = row.get(toa_in_col, '')
+                tod_out = row.get(tod_out_col, '')
+                turn = row.get(turn_col, '')
+                flight_in = row.get(flight_in_col, '')
+                flight_out = row.get(flight_out_col, '')
+                
+                norm_in = normalize_gate(gate_in)
+                norm_out = normalize_gate(gate_out)
+                
+                day_in = parse_day(toa_in, report_date)
+                day_out = parse_day(tod_out, report_date)
+                
+                different_date = day_in is not None and day_out is not None and day_in != day_out
+                different_gate = norm_in != norm_out and norm_in and norm_out
+                
+                turn_min = turn_time_to_minutes(turn)
+                over_2h = turn_min > 120
+                
+                # Debug: Show why a row might be included
+                if different_date or different_gate or over_2h:
+                    st.write(f"**Row {idx}**: Tail={tail}, Different Date={different_date}, Different Gate={different_gate}, Turn Time={turn} ({turn_min} min), Over 2h={over_2h}")
+                
+                if different_date or different_gate or over_2h:
+                    # Tow logic:
+                    # - Arrived yesterday (day_in < 0), departing today or later: tow from BSE to departure gate
+                    # - Arriving today (day_in = 0), departing tomorrow (day_out > 0): tow from arrival gate to BSE
+                    # - Different gates on same day: tow from arrival gate to departure gate
+                    # - Over 2h turn time on same gate: tow from arrival gate to departure gate
+                    tow_from = 'BSE' if day_in is not None and day_in < 0 else norm_in
+                    tow_to = 'BSE' if day_out is not None and day_out > 0 else norm_out
                     
-                tows.append({
-                    'Arrival Flight #': remove_qk_prefix(flight_in),
-                    'Tail': tail,
-                    'Tow From': tow_from,
-                    'Tow To': tow_to,
-                    'Sked Pickup': '',
-                    'Acft Release Time': '',
-                    'Time Gate Opens At': '',
-                    'Actual Pickup': '',
-                    'Actual Drop': '',
-                    'Dep Flight #': remove_qk_prefix(flight_out),
-                    'Dep Time': tod_out
-                })
-        
-        if tows:
-            tow_df = pd.DataFrame(tows)
-            st.dataframe(tow_df)
+                    # Skip if both tow_from and tow_to are BSE
+                    if tow_from == 'BSE' and tow_to == 'BSE':
+                        continue
+                        
+                    tows.append({
+                        'Arrival Flight #': remove_qk_prefix(flight_in),
+                        'Tail': tail,
+                        'Tow From': tow_from,
+                        'Tow To': tow_to,
+                        'Sked Pickup': '',
+                        'Acft Release Time': '',
+                        'Time Gate Opens At': '',
+                        'Actual Pickup': '',
+                        'Actual Drop': '',
+                        'Dep Flight #': remove_qk_prefix(flight_out),
+                        'Dep Time': tod_out
+                    })
             
-            # Generate CSV for download
-            csv = tow_df.to_csv(index=False)
-            
-            st.download_button(
-                label="Download Tow Move Sheet",
-                data=csv,
-                file_name="tow_move_sheet.csv",
-                mime="text/csv"
-            )
-        else:
-            st.write("No tow moves found.")
+            if tows:
+                tow_df = pd.DataFrame(tows)
+                st.dataframe(tow_df)
+                
+                # Generate CSV for download
+                csv = tow_df.to_csv(index=False)
+                
+                st.download_button(
+                    label="Download Tow Move Sheet",
+                    data=csv,
+                    file_name="tow_move_sheet.csv",
+                    mime="text/csv"
+                )
+            else:
+                st.warning("No tow moves found. Check debug output above for details.")
+                
+        except Exception as e:
+            st.error(f"An error occurred in Tow Move Generator: {str(e)}")
